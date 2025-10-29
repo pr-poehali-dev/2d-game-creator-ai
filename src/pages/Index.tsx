@@ -16,36 +16,56 @@ interface GameEntity {
   nodes: string[];
 }
 
+interface Game {
+  id: string;
+  name: string;
+  description: string;
+  thumbnail: string;
+  entities: GameEntity[];
+  createdAt: string;
+}
+
 const Index = () => {
   const [activeTab, setActiveTab] = useState('generator');
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [library, setLibrary] = useState<GameEntity[]>([
+  const [games, setGames] = useState<Game[]>([
     {
       id: '1',
-      name: 'Герой',
-      type: 'character',
-      description: 'Игровой персонаж с базовым управлением',
-      sprite: '🦸',
-      nodes: ['movement', 'dialog', 'inventory']
-    },
-    {
-      id: '2',
-      name: 'NPC Торговец',
-      type: 'character',
-      description: 'Персонаж для торговли предметами',
-      sprite: '🧙',
-      nodes: ['dialog', 'shop']
-    },
-    {
-      id: '3',
-      name: 'Монета',
-      type: 'object',
-      description: 'Собираемый объект валюты',
-      sprite: '🪙',
-      nodes: ['collectible']
+      name: 'Приключения Героя',
+      description: 'Pixel-art RPG с торговцами и собиранием монет',
+      thumbnail: '🏰',
+      createdAt: '2025-10-25',
+      entities: [
+        {
+          id: '1',
+          name: 'Герой',
+          type: 'character',
+          description: 'Игровой персонаж с базовым управлением',
+          sprite: '🦸',
+          nodes: ['movement', 'dialog', 'inventory']
+        },
+        {
+          id: '2',
+          name: 'NPC Торговец',
+          type: 'character',
+          description: 'Персонаж для торговли предметами',
+          sprite: '🧙',
+          nodes: ['dialog', 'shop']
+        },
+        {
+          id: '3',
+          name: 'Монета',
+          type: 'object',
+          description: 'Собираемый объект валюты',
+          sprite: '🪙',
+          nodes: ['collectible']
+        }
+      ]
     }
   ]);
+  const [library, setLibrary] = useState<GameEntity[]>([]);
+  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [selectedEntity, setSelectedEntity] = useState<GameEntity | null>(null);
   const { toast } = useToast();
 
@@ -53,7 +73,7 @@ const Index = () => {
     if (!prompt.trim()) {
       toast({
         title: 'Введите описание',
-        description: 'Опишите, что вы хотите создать',
+        description: 'Опишите какую игру вы хотите создать',
         variant: 'destructive'
       });
       return;
@@ -62,24 +82,53 @@ const Index = () => {
     setIsGenerating(true);
     
     setTimeout(() => {
-      const newEntity: GameEntity = {
+      const gameEntities: GameEntity[] = [
+        {
+          id: `${Date.now()}-1`,
+          name: 'Главный герой',
+          type: 'character',
+          description: 'Персонаж игрока',
+          sprite: '🎮',
+          nodes: ['movement', 'jump', 'attack']
+        },
+        {
+          id: `${Date.now()}-2`,
+          name: 'Враг',
+          type: 'character',
+          description: 'Противник с AI',
+          sprite: '👾',
+          nodes: ['ai', 'patrol', 'attack']
+        },
+        {
+          id: `${Date.now()}-3`,
+          name: 'Бонус',
+          type: 'object',
+          description: 'Собираемый предмет',
+          sprite: '⭐',
+          nodes: ['collectible', 'score']
+        }
+      ];
+
+      const newGame: Game = {
         id: Date.now().toString(),
-        name: 'Сгенерированный объект',
-        type: 'object',
+        name: 'Моя новая игра',
         description: prompt,
-        sprite: '✨',
-        nodes: ['custom']
+        thumbnail: '🎮',
+        createdAt: new Date().toISOString().split('T')[0],
+        entities: gameEntities
       };
       
-      setLibrary([...library, newEntity]);
+      setGames([newGame, ...games]);
+      setLibrary([...library, ...gameEntities]);
       setPrompt('');
       setIsGenerating(false);
+      setActiveTab('games');
       
       toast({
-        title: 'Готово!',
-        description: 'Новый объект добавлен в библиотеку'
+        title: 'Игра создана!',
+        description: 'Все элементы добавлены в библиотеку'
       });
-    }, 2000);
+    }, 2500);
   };
 
   const entityTypeColors = {
@@ -113,10 +162,14 @@ const Index = () => {
 
       <main className="container mx-auto px-4 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-3 bg-slate-900 border border-slate-800">
+          <TabsList className="grid w-full max-w-3xl mx-auto grid-cols-4 bg-slate-900 border border-slate-800">
             <TabsTrigger value="generator" className="data-[state=active]:bg-lime-500 data-[state=active]:text-slate-950">
               <Icon name="Sparkles" size={18} className="mr-2" />
               AI-Генератор
+            </TabsTrigger>
+            <TabsTrigger value="games" className="data-[state=active]:bg-lime-500 data-[state=active]:text-slate-950">
+              <Icon name="Gamepad2" size={18} className="mr-2" />
+              Мои игры
             </TabsTrigger>
             <TabsTrigger value="library" className="data-[state=active]:bg-lime-500 data-[state=active]:text-slate-950">
               <Icon name="Library" size={18} className="mr-2" />
@@ -135,19 +188,19 @@ const Index = () => {
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-lime-500/20 mb-4">
                     <Icon name="Sparkles" size={32} className="text-lime-500" />
                   </div>
-                  <h2 className="text-3xl font-bold text-white mb-2">AI-генератор игровых объектов</h2>
-                  <p className="text-slate-400">Опишите, что вы хотите создать, и AI сгенерирует готовый объект</p>
+                  <h2 className="text-3xl font-bold text-white mb-2">AI-генератор игр</h2>
+                  <p className="text-slate-400">Опишите какую игру хотите создать, и AI сгенерирует готовый проект</p>
                 </div>
 
                 <div className="space-y-6">
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Описание объекта или поведения
+                      Описание игры
                     </label>
                     <Textarea
                       value={prompt}
                       onChange={(e) => setPrompt(e.target.value)}
-                      placeholder="Например: создай летающего дракона, который атакует огнем при приближении игрока..."
+                      placeholder="Например: создай платформер где персонаж прыгает по платформам, собирает монеты и избегает врагов..."
                       className="min-h-[150px] bg-slate-950 border-slate-700 text-white placeholder:text-slate-500 resize-none"
                     />
                   </div>
@@ -166,7 +219,7 @@ const Index = () => {
                       ) : (
                         <>
                           <Icon name="Sparkles" size={20} className="mr-2" />
-                          Сгенерировать
+                          Создать игру
                         </>
                       )}
                     </Button>
@@ -174,20 +227,54 @@ const Index = () => {
 
                   <div className="grid grid-cols-3 gap-4 pt-6 border-t border-slate-800">
                     <div className="text-center">
-                      <div className="text-2xl mb-2">🎭</div>
-                      <div className="text-sm text-slate-400">Персонажи</div>
+                      <div className="text-2xl mb-2">🎮</div>
+                      <div className="text-sm text-slate-400">Платформеры</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl mb-2">⚡</div>
-                      <div className="text-sm text-slate-400">Поведение</div>
+                      <div className="text-2xl mb-2">🏰</div>
+                      <div className="text-sm text-slate-400">RPG</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl mb-2">🎨</div>
-                      <div className="text-sm text-slate-400">Интерфейсы</div>
+                      <div className="text-2xl mb-2">🚀</div>
+                      <div className="text-sm text-slate-400">Аркады</div>
                     </div>
                   </div>
                 </div>
               </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="games" className="mt-8">
+            <div className="max-w-6xl mx-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-white">Мои игры</h2>
+                <Button onClick={() => setActiveTab('generator')} className="bg-lime-500 hover:bg-lime-600 text-slate-950">
+                  <Icon name="Plus" size={18} className="mr-2" />
+                  Создать игру
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {games.map((game) => (
+                  <Card
+                    key={game.id}
+                    className="bg-slate-900 border-slate-800 overflow-hidden cursor-pointer hover:border-lime-500/50 transition-all group"
+                    onClick={() => setSelectedGame(game)}
+                  >
+                    <div className="bg-gradient-to-br from-lime-500/20 to-slate-900 p-8 flex items-center justify-center">
+                      <div className="text-7xl group-hover:scale-110 transition-transform">{game.thumbnail}</div>
+                    </div>
+                    <div className="p-6">
+                      <h3 className="text-xl font-bold text-white mb-2">{game.name}</h3>
+                      <p className="text-sm text-slate-400 mb-4 line-clamp-2">{game.description}</p>
+                      <div className="flex items-center justify-between text-xs text-slate-500">
+                        <span>{game.entities.length} элементов</span>
+                        <span>{game.createdAt}</span>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
             </div>
           </TabsContent>
 
