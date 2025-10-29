@@ -408,6 +408,39 @@ const Index = () => {
                         </div>
                       </Card>
                     </div>
+
+                    <div className="col-span-3">
+                      <Card className="bg-slate-900 border-slate-800 h-full p-6">
+                        <h3 className="text-lg font-semibold text-white mb-4">Узловая система</h3>
+                        {selectedEntity ? (
+                          <div className="space-y-4">
+                            <div className="text-4xl text-center mb-2">{selectedEntity.sprite}</div>
+                            <h4 className="font-semibold text-white text-center">{selectedEntity.name}</h4>
+                            
+                            <div className="space-y-2 pt-4 border-t border-slate-800">
+                              <p className="text-xs text-slate-400 uppercase font-medium">Подключенные узлы:</p>
+                              {selectedEntity.nodes.map((node) => (
+                                <div key={node} className="bg-slate-950 border border-slate-800 rounded p-3 flex items-center justify-between">
+                                  <span className="text-sm text-slate-300">{node}</span>
+                                  <Icon name="Link" size={16} className="text-lime-500" />
+                                </div>
+                              ))}
+                            </div>
+
+                            <Button className="w-full bg-lime-500 hover:bg-lime-600 text-slate-950 mt-4">
+                              <Icon name="Plus" size={16} className="mr-2" />
+                              Добавить узел
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="text-center text-slate-500 py-12">
+                            <Icon name="MousePointer" size={48} className="mx-auto mb-3 opacity-50" />
+                            <p className="text-sm">Выберите объект</p>
+                          </div>
+                        )}
+                      </Card>
+                    </div>
+                  </div>
                 </>
               ) : (
                 <div className="grid grid-cols-12 gap-6 h-[calc(100vh-250px)]">
@@ -423,38 +456,6 @@ const Index = () => {
                           </Button>
                         </div>
                       </div>
-                    </Card>
-                  </div>
-
-                  <div className="col-span-3">
-                    <Card className="bg-slate-900 border-slate-800 h-full p-6">
-                      <h3 className="text-lg font-semibold text-white mb-4">Узловая система</h3>
-                      {selectedEntity ? (
-                        <div className="space-y-4">
-                          <div className="text-4xl text-center mb-2">{selectedEntity.sprite}</div>
-                          <h4 className="font-semibold text-white text-center">{selectedEntity.name}</h4>
-                          
-                          <div className="space-y-2 pt-4 border-t border-slate-800">
-                            <p className="text-xs text-slate-400 uppercase font-medium">Подключенные узлы:</p>
-                            {selectedEntity.nodes.map((node) => (
-                              <div key={node} className="bg-slate-950 border border-slate-800 rounded p-3 flex items-center justify-between">
-                                <span className="text-sm text-slate-300">{node}</span>
-                                <Icon name="Link" size={16} className="text-lime-500" />
-                              </div>
-                            ))}
-                          </div>
-
-                          <Button className="w-full bg-lime-500 hover:bg-lime-600 text-slate-950 mt-4">
-                            <Icon name="Plus" size={16} className="mr-2" />
-                            Добавить узел
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="text-center text-slate-500 py-12">
-                          <Icon name="MousePointer" size={48} className="mx-auto mb-3 opacity-50" />
-                          <p className="text-sm">Выберите объект</p>
-                        </div>
-                      )}
                     </Card>
                   </div>
                 </div>
