@@ -46,6 +46,7 @@ const GamePreview = ({ game, onClose }: GamePreviewProps) => {
   const gameObjectsRef = useRef<GameObject[]>([]);
   const animationFrameRef = useRef<number>();
   const keysRef = useRef<Set<string>>(new Set());
+  const [touchDirection, setTouchDirection] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -139,13 +140,19 @@ const GamePreview = ({ game, onClose }: GamePreviewProps) => {
       
       if (player) {
         const speed = 5;
-        if (keysRef.current.has('ArrowLeft') || keysRef.current.has('a')) player.vx = -speed;
-        else if (keysRef.current.has('ArrowRight') || keysRef.current.has('d')) player.vx = speed;
-        else player.vx *= 0.8;
+        
+        if (touchDirection.x !== 0 || touchDirection.y !== 0) {
+          player.vx = touchDirection.x * speed;
+          player.vy = touchDirection.y * speed;
+        } else {
+          if (keysRef.current.has('ArrowLeft') || keysRef.current.has('a')) player.vx = -speed;
+          else if (keysRef.current.has('ArrowRight') || keysRef.current.has('d')) player.vx = speed;
+          else player.vx *= 0.8;
 
-        if (keysRef.current.has('ArrowUp') || keysRef.current.has('w')) player.vy = -speed;
-        else if (keysRef.current.has('ArrowDown') || keysRef.current.has('s')) player.vy = speed;
-        else player.vy *= 0.8;
+          if (keysRef.current.has('ArrowUp') || keysRef.current.has('w')) player.vy = -speed;
+          else if (keysRef.current.has('ArrowDown') || keysRef.current.has('s')) player.vy = speed;
+          else player.vy *= 0.8;
+        }
 
         player.x += player.vx;
         player.y += player.vy;
@@ -270,7 +277,7 @@ const GamePreview = ({ game, onClose }: GamePreviewProps) => {
 
       ctx.fillStyle = '#64748b';
       ctx.font = '14px Rubik';
-      ctx.fillText('WASD / Стрелки для управления', 20, canvas.height - 20);
+      ctx.fillText('Используй джойстик для управления', 20, canvas.height - 20);
 
       animationFrameRef.current = requestAnimationFrame(gameLoop);
     };
@@ -296,6 +303,14 @@ const GamePreview = ({ game, onClose }: GamePreviewProps) => {
     setScore(0);
     gameObjectsRef.current = [];
     setIsPlaying(true);
+  };
+
+  const handleJoystickMove = (x: number, y: number) => {
+    setTouchDirection({ x, y });
+  };
+
+  const handleJoystickEnd = () => {
+    setTouchDirection({ x: 0, y: 0 });
   };
 
   return (
@@ -374,6 +389,104 @@ const GamePreview = ({ game, onClose }: GamePreviewProps) => {
               );
             })}
           </div>
+
+          <VirtualJoystick
+            onMove={handleJoystickMove}
+            onEnd={handleJoystickEnd}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface VirtualJoystickProps {
+  onMove: (x: number, y: number) => void;
+  onEnd: () => void;
+}
+
+const VirtualJoystick = ({ onMove, onEnd }: VirtualJoystickProps) => {
+  const joystickRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleStart = (clientX: number, clientY: number) => {
+    setIsDragging(true);
+  };
+
+  const handleMove = (clientX: number, clientY: number) => {
+    if (!isDragging || !joystickRef.current) return;
+
+    const rect = joystickRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    const deltaX = clientX - centerX;
+    const deltaY = clientY - centerY;
+
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    const maxDistance = 40;
+
+    let x = deltaX;
+    let y = deltaY;
+
+    if (distance > maxDistance) {
+      x = (deltaX / distance) * maxDistance;
+      y = (deltaY / distance) * maxDistance;
+    }
+
+    setPosition({ x, y });
+
+    const normalizedX = x / maxDistance;
+    const normalizedY = y / maxDistance;
+    onMove(normalizedX, normalizedY);
+  };
+
+  const handleEnd = () => {
+    setIsDragging(false);
+    setPosition({ x: 0, y: 0 });
+    onEnd();
+  };
+
+  return (
+    <div className="fixed bottom-8 left-8 z-50 md:hidden">
+      <div
+        ref={joystickRef}
+        className="relative w-32 h-32 bg-slate-800/50 rounded-full border-2 border-slate-700 backdrop-blur-sm"
+        onTouchStart={(e) => {
+          e.preventDefault();
+          handleStart(e.touches[0].clientX, e.touches[0].clientY);
+        }}
+        onTouchMove={(e) => {
+          e.preventDefault();
+          handleMove(e.touches[0].clientX, e.touches[0].clientY);
+        }}
+        onTouchEnd={(e) => {
+          e.preventDefault();
+          handleEnd();
+        }}
+        onMouseDown={(e) => {
+          handleStart(e.clientX, e.clientY);
+        }}
+        onMouseMove={(e) => {
+          if (isDragging) {
+            handleMove(e.clientX, e.clientY);
+          }
+        }}
+        onMouseUp={handleEnd}
+        onMouseLeave={handleEnd}
+      >
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-12 h-12 bg-slate-700 rounded-full" />
+        </div>
+        <div
+          className="absolute top-1/2 left-1/2 w-10 h-10 bg-lime-500 rounded-full -translate-x-1/2 -translate-y-1/2 transition-transform"
+          style={{
+            transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`
+          }}
+        />
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <Icon name="Move" size={24} className="text-slate-600" />
         </div>
       </div>
     </div>
