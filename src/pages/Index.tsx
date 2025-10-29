@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
+import GamePreview from '@/components/GamePreview';
 
 interface GameEntity {
   id: string;
@@ -67,6 +68,7 @@ const Index = () => {
   const [library, setLibrary] = useState<GameEntity[]>([]);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [selectedEntity, setSelectedEntity] = useState<GameEntity | null>(null);
+  const [previewGame, setPreviewGame] = useState<Game | null>(null);
   const { toast } = useToast();
 
   const generateGameFromPrompt = (prompt: string) => {
@@ -295,20 +297,41 @@ const Index = () => {
                   <Card
                     key={game.id}
                     className="bg-slate-900 border-slate-800 overflow-hidden cursor-pointer hover:border-lime-500/50 transition-all group"
-                    onClick={() => {
-                      setSelectedGame(game);
-                      setActiveTab('editor');
-                    }}
                   >
-                    <div className="bg-gradient-to-br from-lime-500/20 to-slate-900 p-8 flex items-center justify-center">
+                    <div 
+                      className="bg-gradient-to-br from-lime-500/20 to-slate-900 p-8 flex items-center justify-center"
+                      onClick={() => setPreviewGame(game)}
+                    >
                       <div className="text-7xl group-hover:scale-110 transition-transform">{game.thumbnail}</div>
                     </div>
                     <div className="p-6">
                       <h3 className="text-xl font-bold text-white mb-2">{game.name}</h3>
                       <p className="text-sm text-slate-400 mb-4 line-clamp-2">{game.description}</p>
-                      <div className="flex items-center justify-between text-xs text-slate-500">
+                      <div className="flex items-center justify-between text-xs text-slate-500 mb-4">
                         <span>{game.entities.length} элементов</span>
                         <span>{game.createdAt}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => setPreviewGame(game)}
+                          className="flex-1 bg-lime-500 hover:bg-lime-600 text-slate-950 font-medium"
+                          size="sm"
+                        >
+                          <Icon name="Play" size={16} className="mr-2" />
+                          Играть
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setSelectedGame(game);
+                            setActiveTab('editor');
+                          }}
+                          variant="outline"
+                          className="flex-1 border-slate-700"
+                          size="sm"
+                        >
+                          <Icon name="Settings" size={16} className="mr-2" />
+                          Редактор
+                        </Button>
                       </div>
                     </div>
                   </Card>
@@ -464,6 +487,13 @@ const Index = () => {
           </TabsContent>
         </Tabs>
       </main>
+      
+      {previewGame && (
+        <GamePreview
+          game={previewGame}
+          onClose={() => setPreviewGame(null)}
+        />
+      )}
     </div>
   );
 };
