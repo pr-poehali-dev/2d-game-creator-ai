@@ -69,6 +69,67 @@ const Index = () => {
   const [selectedEntity, setSelectedEntity] = useState<GameEntity | null>(null);
   const { toast } = useToast();
 
+  const generateGameFromPrompt = (prompt: string) => {
+    const gameTemplates = [
+      {
+        keywords: ['платформер', 'прыг', 'jump'],
+        name: 'Pixel Platformer',
+        thumbnail: '🏃',
+        entities: [
+          { name: 'Герой', sprite: '🦸', type: 'character' as const, desc: 'Прыгающий персонаж', nodes: ['movement', 'jump', 'double-jump'] },
+          { name: 'Платформа', sprite: '🟫', type: 'object' as const, desc: 'Твёрдая поверхность', nodes: ['collision', 'static'] },
+          { name: 'Шип', sprite: '🔺', type: 'object' as const, desc: 'Опасная ловушка', nodes: ['damage', 'hazard'] },
+          { name: 'Монета', sprite: '🪙', type: 'object' as const, desc: 'Собираемая валюта', nodes: ['collectible', 'score'] }
+        ]
+      },
+      {
+        keywords: ['rpg', 'приключен', 'квест'],
+        name: 'Adventure Quest',
+        thumbnail: '🏰',
+        entities: [
+          { name: 'Рыцарь', sprite: '⚔️', type: 'character' as const, desc: 'Отважный воин', nodes: ['movement', 'attack', 'inventory'] },
+          { name: 'Дракон', sprite: '🐉', type: 'character' as const, desc: 'Огнедышащий босс', nodes: ['ai', 'fire-attack', 'health'] },
+          { name: 'Сундук', sprite: '📦', type: 'object' as const, desc: 'Хранилище сокровищ', nodes: ['loot', 'interact'] },
+          { name: 'Зелье', sprite: '🧪', type: 'object' as const, desc: 'Лечебное зелье', nodes: ['heal', 'collectible'] }
+        ]
+      },
+      {
+        keywords: ['аркад', 'arcade', 'шутер', 'shoot'],
+        name: 'Space Arcade',
+        thumbnail: '🚀',
+        entities: [
+          { name: 'Корабль', sprite: '🚀', type: 'character' as const, desc: 'Космический истребитель', nodes: ['movement', 'shoot', 'shield'] },
+          { name: 'Пришелец', sprite: '👽', type: 'character' as const, desc: 'Враждебный инопланетянин', nodes: ['ai', 'shoot', 'patrol'] },
+          { name: 'Астероид', sprite: '☄️', type: 'object' as const, desc: 'Летающий камень', nodes: ['damage', 'movement'] },
+          { name: 'Энергия', sprite: '⚡', type: 'object' as const, desc: 'Усиление оружия', nodes: ['powerup', 'collectible'] }
+        ]
+      }
+    ];
+
+    const lowerPrompt = prompt.toLowerCase();
+    let selectedTemplate = gameTemplates[Math.floor(Math.random() * gameTemplates.length)];
+    
+    for (const template of gameTemplates) {
+      if (template.keywords.some(kw => lowerPrompt.includes(kw))) {
+        selectedTemplate = template;
+        break;
+      }
+    }
+
+    return {
+      name: selectedTemplate.name,
+      thumbnail: selectedTemplate.thumbnail,
+      entities: selectedTemplate.entities.map((e, idx) => ({
+        id: `${Date.now()}-${idx}`,
+        name: e.name,
+        type: e.type,
+        description: e.desc,
+        sprite: e.sprite,
+        nodes: e.nodes
+      }))
+    };
+  };
+
   const handleGenerate = async () => {
     if (!prompt.trim()) {
       toast({
@@ -82,44 +143,19 @@ const Index = () => {
     setIsGenerating(true);
     
     setTimeout(() => {
-      const gameEntities: GameEntity[] = [
-        {
-          id: `${Date.now()}-1`,
-          name: 'Главный герой',
-          type: 'character',
-          description: 'Персонаж игрока',
-          sprite: '🎮',
-          nodes: ['movement', 'jump', 'attack']
-        },
-        {
-          id: `${Date.now()}-2`,
-          name: 'Враг',
-          type: 'character',
-          description: 'Противник с AI',
-          sprite: '👾',
-          nodes: ['ai', 'patrol', 'attack']
-        },
-        {
-          id: `${Date.now()}-3`,
-          name: 'Бонус',
-          type: 'object',
-          description: 'Собираемый предмет',
-          sprite: '⭐',
-          nodes: ['collectible', 'score']
-        }
-      ];
+      const generated = generateGameFromPrompt(prompt);
 
       const newGame: Game = {
         id: Date.now().toString(),
-        name: 'Моя новая игра',
+        name: generated.name,
         description: prompt,
-        thumbnail: '🎮',
+        thumbnail: generated.thumbnail,
         createdAt: new Date().toISOString().split('T')[0],
-        entities: gameEntities
+        entities: generated.entities
       };
       
       setGames([newGame, ...games]);
-      setLibrary([...library, ...gameEntities]);
+      setLibrary([...library, ...generated.entities]);
       setPrompt('');
       setIsGenerating(false);
       setActiveTab('games');
@@ -259,7 +295,10 @@ const Index = () => {
                   <Card
                     key={game.id}
                     className="bg-slate-900 border-slate-800 overflow-hidden cursor-pointer hover:border-lime-500/50 transition-all group"
-                    onClick={() => setSelectedGame(game)}
+                    onClick={() => {
+                      setSelectedGame(game);
+                      setActiveTab('editor');
+                    }}
                   >
                     <div className="bg-gradient-to-br from-lime-500/20 to-slate-900 p-8 flex items-center justify-center">
                       <div className="text-7xl group-hover:scale-110 transition-transform">{game.thumbnail}</div>
@@ -322,67 +361,104 @@ const Index = () => {
 
           <TabsContent value="editor" className="mt-8">
             <div className="max-w-7xl mx-auto">
-              <div className="grid grid-cols-12 gap-6 h-[calc(100vh-250px)]">
-                <div className="col-span-9">
-                  <Card className="bg-slate-900 border-slate-800 h-full p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-white">Canvas</h3>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="border-slate-700">
-                          <Icon name="Play" size={16} className="mr-2" />
-                          Тест
-                        </Button>
-                        <Button size="sm" className="bg-lime-500 hover:bg-lime-600 text-slate-950">
-                          <Icon name="Save" size={16} className="mr-2" />
-                          Сохранить
-                        </Button>
+              {selectedGame ? (
+                <>
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-4">
+                      <Button variant="outline" onClick={() => setActiveTab('games')} className="border-slate-700">
+                        <Icon name="ArrowLeft" size={18} className="mr-2" />
+                        Назад
+                      </Button>
+                      <div>
+                        <h2 className="text-2xl font-bold text-white">{selectedGame.name}</h2>
+                        <p className="text-sm text-slate-400">{selectedGame.description}</p>
                       </div>
                     </div>
-                    <div className="bg-slate-950 border-2 border-dashed border-slate-800 rounded-lg h-[calc(100%-60px)] flex items-center justify-center">
-                      <div className="text-center">
-                        <div className="text-6xl mb-4">🎮</div>
-                        <p className="text-slate-400 mb-4">Перетащите объекты из библиотеки</p>
-                        <Button className="bg-lime-500 hover:bg-lime-600 text-slate-950">
-                          <Icon name="Plus" size={18} className="mr-2" />
-                          Добавить объект
-                        </Button>
-                      </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" className="border-slate-700">
+                        <Icon name="Play" size={18} className="mr-2" />
+                        Тест
+                      </Button>
+                      <Button className="bg-lime-500 hover:bg-lime-600 text-slate-950">
+                        <Icon name="Save" size={18} className="mr-2" />
+                        Сохранить
+                      </Button>
                     </div>
-                  </Card>
-                </div>
-
-                <div className="col-span-3">
-                  <Card className="bg-slate-900 border-slate-800 h-full p-6">
-                    <h3 className="text-lg font-semibold text-white mb-4">Узловая система</h3>
-                    {selectedEntity ? (
-                      <div className="space-y-4">
-                        <div className="text-4xl text-center mb-2">{selectedEntity.sprite}</div>
-                        <h4 className="font-semibold text-white text-center">{selectedEntity.name}</h4>
-                        
-                        <div className="space-y-2 pt-4 border-t border-slate-800">
-                          <p className="text-xs text-slate-400 uppercase font-medium">Подключенные узлы:</p>
-                          {selectedEntity.nodes.map((node) => (
-                            <div key={node} className="bg-slate-950 border border-slate-800 rounded p-3 flex items-center justify-between">
-                              <span className="text-sm text-slate-300">{node}</span>
-                              <Icon name="Link" size={16} className="text-lime-500" />
-                            </div>
+                  </div>
+                  <div className="grid grid-cols-12 gap-6 h-[calc(100vh-300px)]">
+                    <div className="col-span-9">
+                      <Card className="bg-slate-900 border-slate-800 h-full p-6">
+                        <h3 className="text-lg font-semibold text-white mb-4">Игровые объекты</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                          {selectedGame.entities.map((entity) => (
+                            <Card
+                              key={entity.id}
+                              className="bg-slate-950 border-slate-800 p-4 cursor-pointer hover:border-lime-500/50 transition-all"
+                              onClick={() => setSelectedEntity(entity)}
+                            >
+                              <div className="flex items-center gap-4">
+                                <div className="text-4xl">{entity.sprite}</div>
+                                <div className="flex-1">
+                                  <h4 className="font-semibold text-white mb-1">{entity.name}</h4>
+                                  <p className="text-xs text-slate-400">{entity.description}</p>
+                                </div>
+                              </div>
+                            </Card>
                           ))}
                         </div>
+                      </Card>
+                    </div>
+                </>
+              ) : (
+                <div className="grid grid-cols-12 gap-6 h-[calc(100vh-250px)]">
+                  <div className="col-span-9">
+                    <Card className="bg-slate-900 border-slate-800 h-full p-6">
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center">
+                          <div className="text-6xl mb-4">🎮</div>
+                          <p className="text-slate-400 mb-4">Выберите игру из раздела "Мои игры"</p>
+                          <Button onClick={() => setActiveTab('games')} className="bg-lime-500 hover:bg-lime-600 text-slate-950">
+                            <Icon name="Gamepad2" size={18} className="mr-2" />
+                            Перейти к играм
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  </div>
 
-                        <Button className="w-full bg-lime-500 hover:bg-lime-600 text-slate-950 mt-4">
-                          <Icon name="Plus" size={16} className="mr-2" />
-                          Добавить узел
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="text-center text-slate-500 py-12">
-                        <Icon name="MousePointer" size={48} className="mx-auto mb-3 opacity-50" />
-                        <p className="text-sm">Выберите объект из библиотеки</p>
-                      </div>
-                    )}
-                  </Card>
+                  <div className="col-span-3">
+                    <Card className="bg-slate-900 border-slate-800 h-full p-6">
+                      <h3 className="text-lg font-semibold text-white mb-4">Узловая система</h3>
+                      {selectedEntity ? (
+                        <div className="space-y-4">
+                          <div className="text-4xl text-center mb-2">{selectedEntity.sprite}</div>
+                          <h4 className="font-semibold text-white text-center">{selectedEntity.name}</h4>
+                          
+                          <div className="space-y-2 pt-4 border-t border-slate-800">
+                            <p className="text-xs text-slate-400 uppercase font-medium">Подключенные узлы:</p>
+                            {selectedEntity.nodes.map((node) => (
+                              <div key={node} className="bg-slate-950 border border-slate-800 rounded p-3 flex items-center justify-between">
+                                <span className="text-sm text-slate-300">{node}</span>
+                                <Icon name="Link" size={16} className="text-lime-500" />
+                              </div>
+                            ))}
+                          </div>
+
+                          <Button className="w-full bg-lime-500 hover:bg-lime-600 text-slate-950 mt-4">
+                            <Icon name="Plus" size={16} className="mr-2" />
+                            Добавить узел
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="text-center text-slate-500 py-12">
+                          <Icon name="MousePointer" size={48} className="mx-auto mb-3 opacity-50" />
+                          <p className="text-sm">Выберите объект</p>
+                        </div>
+                      )}
+                    </Card>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </TabsContent>
         </Tabs>
