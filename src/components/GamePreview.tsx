@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
+import EntityIcon from './EntityIcon';
 
 interface GameEntity {
   id: string;
@@ -34,6 +35,8 @@ interface GameObject {
   sprite: string;
   size: number;
   entity: GameEntity;
+  color: string;
+  shape: 'square' | 'circle' | 'triangle' | 'star';
 }
 
 const GamePreview = ({ game, onClose }: GamePreviewProps) => {
@@ -54,6 +57,29 @@ const GamePreview = ({ game, onClose }: GamePreviewProps) => {
     canvas.width = 800;
     canvas.height = 500;
 
+    const getColorForEntity = (entity: GameEntity, idx: number): string => {
+      const colors = ['#84cc16', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
+      
+      if (entity.nodes.includes('movement')) return '#84cc16';
+      if (entity.nodes.includes('ai') || entity.nodes.includes('attack')) return '#ef4444';
+      if (entity.nodes.includes('collectible')) return '#f59e0b';
+      if (entity.nodes.includes('heal')) return '#ec4899';
+      
+      return colors[idx % colors.length];
+    };
+
+    const getShapeForEntity = (entity: GameEntity): 'square' | 'circle' | 'triangle' | 'star' => {
+      if (entity.type === 'character') {
+        if (entity.nodes.includes('movement')) return 'square';
+        if (entity.nodes.includes('ai')) return 'triangle';
+        return 'square';
+      }
+      if (entity.nodes.includes('collectible')) return 'star';
+      if (entity.nodes.includes('heal')) return 'circle';
+      if (entity.nodes.includes('damage')) return 'triangle';
+      return 'circle';
+    };
+
     const initGameObjects = () => {
       const objects: GameObject[] = [];
       
@@ -65,8 +91,10 @@ const GamePreview = ({ game, onClose }: GamePreviewProps) => {
           vx: entity.type === 'character' && idx === 0 ? 0 : (Math.random() - 0.5) * 2,
           vy: entity.type === 'object' ? Math.random() * 2 : 0,
           sprite: entity.sprite,
-          size: 40,
-          entity
+          size: 32,
+          entity,
+          color: getColorForEntity(entity, idx),
+          shape: getShapeForEntity(entity)
         };
         objects.push(obj);
       });
@@ -150,19 +178,89 @@ const GamePreview = ({ game, onClose }: GamePreviewProps) => {
         }
       });
 
-      gameObjectsRef.current.forEach((obj) => {
-        ctx.font = `${obj.size}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(obj.sprite, obj.x, obj.y);
+      const drawShape = (obj: GameObject) => {
+        ctx.save();
+        ctx.fillStyle = obj.color;
+        ctx.strokeStyle = obj === player ? '#ffffff' : obj.color;
+        ctx.lineWidth = obj === player ? 3 : 2;
 
-        if (obj === player) {
-          ctx.strokeStyle = '#84cc16';
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.arc(obj.x, obj.y, obj.size / 2 + 5, 0, Math.PI * 2);
-          ctx.stroke();
+        switch (obj.shape) {
+          case 'square':
+            ctx.fillRect(obj.x - obj.size / 2, obj.y - obj.size / 2, obj.size, obj.size);
+            if (obj === player) {
+              ctx.strokeRect(obj.x - obj.size / 2, obj.y - obj.size / 2, obj.size, obj.size);
+            }
+            
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(obj.x - obj.size / 4, obj.y - obj.size / 4, obj.size / 8, obj.size / 8);
+            ctx.fillRect(obj.x + obj.size / 8, obj.y - obj.size / 4, obj.size / 8, obj.size / 8);
+            break;
+
+          case 'circle':
+            ctx.beginPath();
+            ctx.arc(obj.x, obj.y, obj.size / 2, 0, Math.PI * 2);
+            ctx.fill();
+            if (obj === player) ctx.stroke();
+            
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.beginPath();
+            ctx.arc(obj.x - obj.size / 6, obj.y - obj.size / 6, obj.size / 6, 0, Math.PI * 2);
+            ctx.fill();
+            break;
+
+          case 'triangle':
+            ctx.beginPath();
+            ctx.moveTo(obj.x, obj.y - obj.size / 2);
+            ctx.lineTo(obj.x - obj.size / 2, obj.y + obj.size / 2);
+            ctx.lineTo(obj.x + obj.size / 2, obj.y + obj.size / 2);
+            ctx.closePath();
+            ctx.fill();
+            if (obj === player) ctx.stroke();
+            
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.moveTo(obj.x - obj.size / 8, obj.y);
+            ctx.lineTo(obj.x, obj.y - obj.size / 6);
+            ctx.lineTo(obj.x + obj.size / 8, obj.y);
+            ctx.closePath();
+            ctx.fill();
+            break;
+
+          case 'star':
+            const spikes = 5;
+            const outerRadius = obj.size / 2;
+            const innerRadius = obj.size / 4;
+            let rot = Math.PI / 2 * 3;
+            const step = Math.PI / spikes;
+
+            ctx.beginPath();
+            ctx.moveTo(obj.x, obj.y - outerRadius);
+            
+            for (let i = 0; i < spikes; i++) {
+              ctx.lineTo(
+                obj.x + Math.cos(rot) * outerRadius,
+                obj.y + Math.sin(rot) * outerRadius
+              );
+              rot += step;
+              ctx.lineTo(
+                obj.x + Math.cos(rot) * innerRadius,
+                obj.y + Math.sin(rot) * innerRadius
+              );
+              rot += step;
+            }
+            
+            ctx.lineTo(obj.x, obj.y - outerRadius);
+            ctx.closePath();
+            ctx.fill();
+            if (obj === player) ctx.stroke();
+            break;
         }
+
+        ctx.restore();
+      };
+
+      gameObjectsRef.current.forEach((obj) => {
+        drawShape(obj);
       });
 
       ctx.fillStyle = '#84cc16';
@@ -245,27 +343,36 @@ const GamePreview = ({ game, onClose }: GamePreviewProps) => {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {game.entities.map((entity) => (
-              <div
-                key={entity.id}
-                className="bg-slate-950 border border-slate-800 rounded p-3"
-              >
-                <div className="text-3xl text-center mb-2">{entity.sprite}</div>
-                <div className="text-sm font-medium text-white text-center mb-1">
-                  {entity.name}
+            {game.entities.map((entity, idx) => {
+              const obj = gameObjectsRef.current.find(o => o.entity.id === entity.id);
+              return (
+                <div
+                  key={entity.id}
+                  className="bg-slate-950 border border-slate-800 rounded p-3"
+                >
+                  <div className="flex items-center justify-center mb-3">
+                    {obj ? (
+                      <EntityIcon color={obj.color} shape={obj.shape} size={32} />
+                    ) : (
+                      <div className="w-12 h-12 bg-slate-800 rounded" />
+                    )}
+                  </div>
+                  <div className="text-sm font-medium text-white text-center mb-1">
+                    {entity.name}
+                  </div>
+                  <div className="flex flex-wrap gap-1 justify-center">
+                    {entity.nodes.slice(0, 2).map((node) => (
+                      <span
+                        key={node}
+                        className="text-xs px-2 py-0.5 bg-lime-500/20 text-lime-400 rounded"
+                      >
+                        {node}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-1 justify-center">
-                  {entity.nodes.slice(0, 2).map((node) => (
-                    <span
-                      key={node}
-                      className="text-xs px-2 py-0.5 bg-lime-500/20 text-lime-400 rounded"
-                    >
-                      {node}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
